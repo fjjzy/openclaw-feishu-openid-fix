@@ -62,9 +62,62 @@ openclaw gateway start
 
 ## 预防措施
 
-1. **修改配置前**：先停止 gateway
-2. **版本升级后**：清理 session 缓存
-3. **多租户切换**：为不同租户使用不同 agent 配置
+### 1. 修改配置前
+先停止 gateway，避免配置热重载导致状态混乱。
+
+### 2. 版本升级后
+清理 session 缓存，确保新版本的插件逻辑正常工作。
+
+### 3. 多租户切换：使用不同 Agent 配置（推荐）
+
+**什么是多租户？**
+飞书的"租户"指不同的企业/组织。每个租户有独立的用户 ID 体系：
+- 百度租户：`baidu.feishu.cn` → 你的 open_id 是 `ou_abc`
+- 字节租户：`bytedance.feishu.cn` → 同一个账号 open_id 是 `ou_xyz`
+
+**问题：** 如果用同一个 agent 切换不同租户，session 里的 open_id 会冲突。
+
+**解决方案：** 为每个租户创建独立的 agent：
+
+```bash
+# 查看现有 agents
+ls ~/.openclaw/agents/
+
+# 创建新 agent（以百度工作账号为例）
+mkdir -p ~/.openclaw/agents/baidu-work
+
+# 复制配置
+cp ~/.openclaw/agents/main/openclaw.json ~/.openclaw/agents/baidu-work/
+
+# 编辑新配置，修改飞书 app_id/app_secret
+vim ~/.openclaw/agents/baidu-work/openclaw.json
+```
+
+**切换 agent：**
+```bash
+openclaw gateway stop
+openclaw config set agent.name=baidu-work
+openclaw gateway start
+```
+
+**好处：**
+- 每个租户有独立的 session 目录，不会 cross
+- 切换时无需删除缓存
+- 配置隔离，互不干扰
+
+**目录结构示例：**
+```
+~/.openclaw/agents/
+├── main/              # 个人飞书
+│   ├── openclaw.json
+│   └── session/
+├── baidu-work/        # 百度工作飞书
+│   ├── openclaw.json
+│   └── session/
+└── school/            # 学校飞书
+    ├── openclaw.json
+    └── session/
+```
 
 ## 相关路径
 
